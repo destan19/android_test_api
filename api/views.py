@@ -1,5 +1,8 @@
 from django.shortcuts import render
 from django.http import HttpResponse
+
+from django.template import loader,Context
+from api.models import *
 import json
 import string
 def echo(request):
@@ -61,4 +64,75 @@ def talk_msg_list(request):
 	res_json['total']=total
 	res_json['list']=msg_list;
 	return HttpResponse(json.dumps(res_json))
+
+def init_data(request):
+	print 'init data'
+	for i in range(100,150):
+		user=User()
+		user.name="dxt_%d"%(i)
+		user.address="sz_%d"%(i)
+		user.email="dest%d@126.com"%(i)
+		user.phone_num="13989973%d"%(i)
+		user.save()
+	return HttpResponse('ok')
+	
+def check_user_exist(username):
+	try:
+		user_id=User.objects.filter(name=username);
+	except:
+		return 0;
+	if (any(user_id)):
+		return 1;
+	else:
+		return 0;
+
+		
+def register(request):
+	username=request.REQUEST.get("username")
+	password=request.REQUEST.get("password")
+	email=request.REQUEST.get("email")
+	phone_num=request.REQUEST.get("phone_num")
+	if username is None or password is None:
+		return HttpResponse('error,username or password is requested.')
+	if username == "" or password=="":
+		return HttpResponse('username error.')
+	
+	user=User()
+	if check_user_exist(username):
+		return HttpResponse('user already exist.')
+	user.name=username
+	user.password = password
+	if phone_num is not None:
+		user.phone_num = phone_num
+	if email is not None:
+		user.email = email
+	user.save()
+	return HttpResponse('register success...')
+	
+def show_user(request):
+	users=User.objects.all();
+	t=loader.get_template('user_list.html')
+	c=Context({
+		'users':users,
+			})
+	return HttpResponse(t.render(c))
+	
+def talkmsg(request):
+	username=request.REQUEST.get("username")
+	if username is None:
+		return HttpResponse('error,username is requested.')
+	try:
+		user_id=User.objects.filter(name=username);
+	except:
+		return HttpResponse('search error.')
+	if (any(user_id)):
+		msgs=TalkMsg.objects.all();
+		t=loader.get_template('user_list.html')
+		c=Context({
+		'msgs':msgs,
+			})
+		return HttpResponse(t.render(c))
+	else:
+		return HttpResponse('user not exist.')
+	
 	

@@ -1,0 +1,42 @@
+<html>
+<body>
+	<head>
+		<title>user list</title>
+	<link href="/static/css/style.css" rel="stylesheet" type="text/css">
+	</head>
+
+<table class="hovertable">
+
+	<tr>
+		<th>id</th>
+		<th>username</th>
+		<th>email</th>
+		<th>phonenum</th>
+		<th>address</th>
+		<th>created at</th>
+		<th>last login</th>
+		<th>is active</th>
+		<th>is authenticated</th>
+		<th>is admin</th>
+		<th>talk msg</th>
+	</tr>
+	{% for user in users %}
+			<tr onmouseover="this.style.backgroundColor='#ffff66';" onmouseout="this.style.backgroundColor='#d4e3e5';">
+					<td>{{user.id}}</td>
+					<td>{{user.name}}</td>
+					<td>{{user.email}}</td>
+					<td>{{user.phone_num}}</td>
+					<td>{{user.address}}</td>
+					<td>{{user.created_at}}</td>
+					<td>{{user.last_login}}</td>
+					<td>{{user.is_active}}</td>
+					<td>{{user.is_authenticated}}</td>
+					<td>{{user.is_admin}}</td>
+					<td><a href="talkmsg?username={{user.name}}">show</a></td>
+			</tr>
+	{% endfor %}
+
+</table>
+
+</body>
+</html>
