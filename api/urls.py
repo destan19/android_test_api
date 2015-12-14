@@ -7,4 +7,7 @@ urlpatterns = [
 	url(r'^init_data',init_data),
 	url(r'^register',register),
 	url(r'^show_user',show_user),
+	url(r'^talkmsg',talkmsg),
+	url(r'^comment',comment),
+	url(r'^praise',praise),
 ]

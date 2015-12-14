@@ -1,6 +1,6 @@
 #coding=utf-8
 from django.db import models
-
+from django.utils import timezone
 # Create your models here.
 from django.contrib.auth.models import (BaseUserManager, AbstractBaseUser)
 
@@ -44,14 +44,15 @@ class User(AbstractBaseUser):
   is_admin = models.BooleanField(default=False)
   access_token = models.CharField(max_length=100, blank=True)
   refresh_token = models.CharField(max_length=100, blank=True)
-  expires_in = models.BigIntegerField(max_length=100, default=0)
+  expires_in = models.BigIntegerField(default=0)
 
   
   objects = UserManager()
 
   USERNAME_FIELD = 'name'
   REQUIRED_FIELDS = ('email',)
-
+  def __str__(self):
+	return self.name
   class Meta:
     ordering = ('-created_at',)
 
@@ -75,23 +76,55 @@ class User(AbstractBaseUser):
     return self.is_admin
 	
 class Relation(models.Model):
-	self=models.ForeignKey(User)
-	friend_id=models.CharField(max_length=32);
+	me=models.ForeignKey(User)
+	friend=models.ForeignKey(User,related_name='relation_friend')
+
 	
 
 class TalkMsg(models.Model):
 	user=models.ForeignKey(User)
 	img_url=models.CharField(max_length=128)
 	content=models.CharField(max_length=128)
+	address=models.CharField(max_length=128,null=True)
+	device=models.CharField(max_length=128,null=True)
+	src=models.CharField(max_length=128,null=True)
+	date = models.DateTimeField(default=timezone.now)
+	def __str__(self):
+		return self.content
+
 
 class Comment(models.Model):
 	talkmsg = models.ForeignKey(TalkMsg)
 	friend=models.ForeignKey(User)
 	comment_content=models.CharField(max_length=128)
-	
+	date = models.DateTimeField(default=timezone.now)
+	def __str__(self):
+		return self.friend.name
+		
 class Praise(models.Model):
 	talkmsg = models.ForeignKey(TalkMsg)
 	friend=models.ForeignKey(User)
-	
+	date = models.DateTimeField(default=timezone.now)
+	def __str__(self):
+		return self.friend.name
+		
+class Blog(models.Model):
+	name=models.CharField(max_length=100)
+	tagline=models.TextField()
+	def __str__(self):
+		return self.name
+class Author(models.Model):
+	name=models.CharField(max_length=100)
+	def __str__(self):
+		return self.name
 
+class Entry(models.Model):
+	blog=models.ForeignKey(Blog)
+	headline=models.CharField(max_length=255)
+	body_text=models.TextField()
+	authors=models.ManyToManyField(Author)
+	n_comments=models.IntegerField()
+	n_pingbacks=models.IntegerField()
+	def __str__(self):
+		return self.headline
 

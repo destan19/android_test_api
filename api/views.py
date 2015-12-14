@@ -110,29 +110,137 @@ def register(request):
 	return HttpResponse('register success...')
 	
 def show_user(request):
+	username=request.GET.get("username")
 	users=User.objects.all();
 	t=loader.get_template('user_list.html')
 	c=Context({
 		'users':users,
 			})
 	return HttpResponse(t.render(c))
+'''
+data_obj['id']=msg.id
+				data_obj['username']=msg.name
+				data_obj['email']=msg.email
+				data_obj['address']=msg.address
+				data_obj['phone_num']=msg.phone_num
+			'''
+
+'''
+	http://192.168.17.134/api/talkmsg?username=derry&json=1&start=1&end=100
+	param:
+		start
+		username
+		end
+'''
+def respTalkmsgJson(request):
+	msg_json={}
+	status_obj={}
+	data_obj={}
+	status_obj['code']=20000
+	status_obj['msg']='success'
+	username=request.GET.get("username")
+	start=request.GET.get("start")
+	end=request.GET.get("end")
+
+	print 'resp talk msg'
+	if username is None:
+		status_obj['code']=40000
+		status_obj['msg']='username is none'
+		msg_json['status']=status_obj
+	else:
+		users=User.objects.filter(name=username)
+		
+		if not any(users):
+			status_obj['code']=40001
+			status_obj['msg']='username is not exist.'
+			msg_json['status']=status_obj
+		else:
+			user=users[0]
+			data_obj['total']=user.talkmsg_set.count()
+			if start is None:
+				start=0
+			if end is None:
+				msgs=user.talkmsg_set.all()[start:]
+			else:
+				msgs=user.talkmsg_set.all()[start:end]
+			data_obj['count']=len(msgs)
+			msg_arr=[]
+			for msg in msgs:
+				msg_obj={}
+				msg_obj['id']=msg.id
+				msg_obj['img_url']=msg.img_url
+				msg_obj['content']=msg.content
+				msg_obj['address']=msg.address
+				msg_obj['device']=msg.device
+				msg_arr.append(msg_obj)
+			data_obj['list']=msg_arr
+			msg_json['status']=status_obj
+			msg_json['data']=data_obj	
+	return HttpResponse(json.dumps(msg_json))
 	
 def talkmsg(request):
-	username=request.REQUEST.get("username")
+	msgs=[]
+	comments={}
+	praises={}
+	users=[]
+	username=request.GET.get("username")
+	json_flag = request.GET.get("json")
+	if json_flag is not None:
+		return respTalkmsgJson(request)
+		
 	if username is None:
-		return HttpResponse('error,username is requested.')
-	try:
-		user_id=User.objects.filter(name=username);
-	except:
-		return HttpResponse('search error.')
-	if (any(user_id)):
-		msgs=TalkMsg.objects.all();
-		t=loader.get_template('user_list.html')
+		users=User.objects.all()
+	else:
+		try:
+			users=User.objects.filter(name=username);
+		except:
+			return HttpResponse('search error.')
+	print users
+	if (any(users)):
+		for i in range(0,len(users)):
+			msgs.extend(users[i].talkmsg_set.all())
+		t=loader.get_template('talkmsg_list.html')
 		c=Context({
 		'msgs':msgs,
 			})
 		return HttpResponse(t.render(c))
 	else:
 		return HttpResponse('user not exist.')
+	
+def praise(request):
+	tid=request.GET.get("id")
+	if tid is None:
+		return HttpResponse('id is None')
+	msg=TalkMsg.objects.filter(id=tid)[0];
+	if msg is None:
+		return HttpResponse('talk msg is None')
+	praises = msg.praise_set.all()
+	print praises
+	
+	if (any(praises)):
+		t=loader.get_template('praise_list.html')
+		c=Context({
+		'praises':praises,
+			})
+		return HttpResponse(t.render(c))
+	return HttpResponse('ok')
+	
+def comment(request):
+	tid=request.GET.get("id")
+	if tid is None:
+		return HttpResponse('id is None')
+	msg=TalkMsg.objects.filter(id=tid)[0];
+	if msg is None:
+		return HttpResponse('talk msg is None')
+	comments = msg.comment_set.all()
+	print comments
+
+	if (any(comments)):
+		t=loader.get_template('comment_list.html')
+		c=Context({
+		'comments':comments,
+			})
+		return HttpResponse(t.render(c))
+	return HttpResponse('ok')
 	
 	

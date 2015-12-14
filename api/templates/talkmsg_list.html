@@ -1,0 +1,46 @@
+<html>
+<body>
+	<head>
+		<title>user list</title>
+	<link href="/static/css/style.css" rel="stylesheet" type="text/css">
+	</head>
+
+<table class="hovertable">
+
+	<tr>
+		<th>username</th>
+		<th>image</th>
+		<th>content</th>
+		<th>comments</th>
+		<th>praises</th>
+		<th>comment</th>
+		<th>prase</th>
+	</tr>
+	{% for msg in msgs %}
+			<tr onmouseover="this.style.backgroundColor='#ffff66';" onmouseout="this.style.backgroundColor='#d4e3e5';">
+					<td>{{msg.user.name}}</td>
+					<td>{{msg.img_url}}</td>
+					<td>{{msg.content}}</td>
+					<td>
+
+					{% for c in msg.comment_set.all%}
+					<p>{{c.friend.name}} </p>
+					{{c.comment_content}}
+					<br>
+					{% endfor %}
+					
+					</td>
+					<td>
+					{% for p in msg.praise_set.all%}
+					<p>{{c.friend.name}} </p>
+					{% endfor %}
+					</td>
+					<td><a href="comment?id={{msg.id}}">show</a></td>
+					<td><a href="praise?id={{msg.id}}">show</a></td>
+			</tr>
+	{% endfor %}
+
+</table>
+
+</body>
+</html>

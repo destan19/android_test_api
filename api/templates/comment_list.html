@@ -1,0 +1,28 @@
+<html>
+<body>
+	<head>
+		<title>user list</title>
+	<link href="/static/css/style.css" rel="stylesheet" type="text/css">
+	</head>
+
+<table class="hovertable">
+
+	<tr>
+		<th>username</th>
+		<th>mail</th>
+		<th>content</th>
+		<th>date time</th>
+	</tr>
+	{% for comment in comments %}
+			<tr onmouseover="this.style.backgroundColor='#ffff66';" onmouseout="this.style.backgroundColor='#d4e3e5';">
+					<td>{{comment.friend.name}}</td>
+					<td>{{comment.friend.email}}</td>
+					<td>{{comment.comment_content}}</td>
+					<td>{{comment.date}}</td>
+			</tr>
+	{% endfor %}
+
+</table>
+
+</body>
+</html>

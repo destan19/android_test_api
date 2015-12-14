@@ -1,0 +1,26 @@
+<html>
+<body>
+	<head>
+		<title>user list</title>
+	<link href="/static/css/style.css" rel="stylesheet" type="text/css">
+	</head>
+
+<table class="hovertable">
+
+	<tr>
+		<th>username</th>
+		<th>mail</th>
+		<th>date time</th>
+	</tr>
+	{% for praise in praises %}
+			<tr onmouseover="this.style.backgroundColor='#ffff66';" onmouseout="this.style.backgroundColor='#d4e3e5';">
+					<td>{{praise.friend.name}}</td>
+					<td>{{praise.friend.email}}</td>
+					<td>{{praise.date}}</td>
+			</tr>
+	{% endfor %}
+
+</table>
+
+</body>
+</html>
