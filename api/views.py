@@ -1,15 +1,62 @@
 from django.shortcuts import render
 from django.http import HttpResponse
-
+from django.shortcuts import render_to_response
 from django.template import loader,Context
 from api.models import *
+from django import forms
 import json
 import string
 def echo(request):
         return HttpResponse("echo...");
+		
+def handle_uploaded_file(p,f):
+    destination = open('name.jpg', 'wb+')
+    for chunk in f.chunks():
+        destination.write(chunk)
+    destination.close()		
 # Create your views here.
-
-
+def upload_test(request):
+	if request.method == 'POST':
+		print request.POST
+		handle_uploaded_file(request.POST,request.FILES['file'])
+		return HttpResponse("ok")
+	else:
+		form = UploadFileForm()
+	return render(request,'upload_test.html', {'form': form})	
+'''
+	func:upload user image 
+	desc:
+	method:post
+	para:
+		username
+		image
+	file:
+		image file
+'''
+def upload_user_image(request):
+	
+	if request.method == 'POST':
+		print '111111111'
+		#username=request.POST.get('name')
+		print '2222222222'
+		if username is None:
+			print 'username is request'
+			return HttpResponse("require username")
+		print 'username=',username
+		users=User.objects.filter(name=username)
+		if not any(users):
+			print 'username not exist'
+			return HttpResponse('username is not exist')
+		fp = open('%s/image.jpg'%(username), 'wb+')
+		for chunk in request.FILE['file'].chunks():
+			fp.write(chunk)
+			fp.close()		
+		print '33333333'
+		return HttpResponse("ok")
+	else:
+		print 'get'
+		return render(request,'upload_test.html')	
+	
 def friend_list(request):
 #	req_para=request.REQUEST.get("device_info")
 #req_json=json.loads(req_para)
@@ -243,4 +290,15 @@ def comment(request):
 		return HttpResponse(t.render(c))
 	return HttpResponse('ok')
 	
-	
+def blog(request):
+	if request.method=='POST':
+		print 'post=',request.POST
+		form =BlogForm(request.POST)
+		if form.is_valid():
+			return HttpResponse('hello')
+	else:
+		form=BlogForm()
+	for field in form:
+		'label=',field.label_tag
+	#return render_to_response('blog.html',{'form':form})
+	return render(request,'blog.html',{'form':form})

@@ -1,0 +1,47 @@
+<html>
+<head>
+<script src="//code.jquery.com/jquery-1.11.0.min.js"></script> 
+ <script type="text/javascript">  
+  <!--  
+    function fsubmit(){  
+        var data = new FormData($('#form1')[0]);  
+        $.ajax({  
+            url: '/api/upload_test',  
+            type: 'POST',  
+            data: data,  
+            dataType: 'JSON',  
+            cache: false,  
+            processData: false,  
+            contentType: false  
+        }).done(function(ret){  
+            if(ret['isSuccess']){  
+                var result = '';  
+                result += 'name=' + ret['name'] + '<br>';  
+                result += 'gender=' + ret['gender'] + '<br>';  
+                result += '<img src="' + ret['file']  + '" width="100">';  
+                $('#result').html(result);  
+            }else{  
+                alert('submit error');  
+            }  
+        });  
+        return false;  
+    }  
+  -->  
+  </script>
+</head>
+<body>
+
+<form name="form1" id="form1">  
+	<p>name:<input type="text" name="name" ></p>  
+	<p>gender:<input type="radio" name="gender" value="1">male <input type="radio" name="gender" value="2">female</p>  
+	<p>photo:<input type="file" name="file" id="file"></p>  
+	<p><input type="button" name="b1" value="submit" onclick="fsubmit()"></p>  
+</form>  
+<form enctype="multipart/form-data" method="POST" action="/api/upload_test/"> 
+ {% csrf_token %} 
+   <input type="file" name="file" />
+   <br /> 
+   <input type="submit" value="upload" /> 
+</form>
+</body>
+</html>

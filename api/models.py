@@ -4,6 +4,8 @@ from django.utils import timezone
 # Create your models here.
 from django.contrib.auth.models import (BaseUserManager, AbstractBaseUser)
 
+from django import forms
+from django.forms import ModelForm
 
 class UserManager(BaseUserManager):
 
@@ -109,10 +111,18 @@ class Praise(models.Model):
 		return self.friend.name
 		
 class Blog(models.Model):
-	name=models.CharField(max_length=100)
-	tagline=models.TextField()
+	name=models.CharField(u"name",max_length=100)
+	tagline=models.TextField(u"tagline")
 	def __str__(self):
 		return self.name
+
+
+class BlogForm(ModelForm):
+	class Meta:
+		model=Blog
+		fields=('name','tagline')
+		
+
 class Author(models.Model):
 	name=models.CharField(max_length=100)
 	def __str__(self):
@@ -127,4 +137,11 @@ class Entry(models.Model):
 	n_pingbacks=models.IntegerField()
 	def __str__(self):
 		return self.headline
+		
+### for test
+
+class UploadFileForm(forms.Form):
+    title = forms.CharField(max_length=50)
+    file = forms.FileField()
+
 

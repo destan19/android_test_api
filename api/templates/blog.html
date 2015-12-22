@@ -1,0 +1,16 @@
+<html>
+<body>
+<form action="/api/blog" method="POST">
+{% csrf_token %}
+ {% for field in form %}
+ <div class="fieldWrapper">
+         {{ field.label_tag }}{{ field }} 
+         {{ field.errors }}
+		 <div>
+    {% endfor %}
+
+<input type='submit' value='submit'/>
+</form>
+</body>
+
+</html>
