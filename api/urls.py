@@ -8,9 +8,14 @@ urlpatterns = [
 	url(r'^talk_msg_list',talk_msg_list),
 	url(r'^init_data',init_data),
 	url(r'^register',register),
+	url(r'^login',login),
 	url(r'^show_user',show_user),
 	url(r'^talkmsg',talkmsg),
 	url(r'^comment',comment),
 	url(r'^praise',praise),
-	url(r'^upload_user_image',upload_user_image)
+	url(r'^upload_user_image',upload_user_image),
+	url(r'^wechat_delete_friend',wechat_delete_friend),
+	url(r'^check_login_status',check_login_status)
+
+	
 ]

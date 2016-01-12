@@ -6,6 +6,17 @@ from api.models import *
 from django import forms
 import json
 import string
+import os
+import urllib, urllib2
+import re
+import cookielib
+import time
+import xml.dom.minidom
+import math
+import csv
+deviceId = 'e000000000000000'
+
+DEBUG = True
 def echo(request):
         return HttpResponse("echo...");
 		
@@ -36,9 +47,7 @@ def upload_test(request):
 def upload_user_image(request):
 	
 	if request.method == 'POST':
-		print '111111111'
 		#username=request.POST.get('name')
-		print '2222222222'
 		if username is None:
 			print 'username is request'
 			return HttpResponse("require username")
@@ -51,7 +60,6 @@ def upload_user_image(request):
 		for chunk in request.FILE['file'].chunks():
 			fp.write(chunk)
 			fp.close()		
-		print '33333333'
 		return HttpResponse("ok")
 	else:
 		print 'get'
@@ -114,14 +122,19 @@ def talk_msg_list(request):
 
 def init_data(request):
 	print 'init data'
-	for i in range(100,150):
-		user=User()
-		user.name="dxt_%d"%(i)
-		user.address="sz_%d"%(i)
-		user.email="dest%d@126.com"%(i)
-		user.phone_num="13989973%d"%(i)
-		user.save()
-	return HttpResponse('ok')
+	for i in range(100,300):
+		t=TalkMsg()
+		derry=User.objects.filter(name='derry')[0]
+		if derry is None:
+			print 'not find derry'
+			derry=User.objects.all()[0]
+		t.address="chang sha"
+		t.device="iphone 6s"	
+		t.user=derry
+		t.img_url="http://test.pychat.xyz:8000/api/static/%d.jpg"%(i)
+		t.content="The toilet paper rolls were delivered to the city hall by Inuyamas designated supplier earlier this December%d"%(i)
+		t.save()
+	return HttpResponse('init data ok')
 	
 def check_user_exist(username):
 	try:
@@ -132,21 +145,52 @@ def check_user_exist(username):
 		return 1;
 	else:
 		return 0;
+def wx_login(request):
+	res_json={}
+	status_json= {}
+	username=request.GET.get("username")
+	password=request.GET.get("password")
+	if username is None or password is None:
+		status_json['code']=4001	
+		status_json['msg']='username or password is none'
+		return HttpResponse(json.dumps(res_json))
 
+	users = User.objects.filter(name=username)
+	if any(users):
+		user=users[0]
+		print user.password
+		if user.password == password:
+			status_json['code']=2000
+			status_json['msg']='success'
+		else:	
+			status_json['code']=4002
+			status_json['msg']='username or password error.'
+	else:
+		status_json['code']=4001
+		status_json['msg']='user is not exist'
+	
+	res_json['status']=status_json
+	print res_json
+	return HttpResponse(json.dumps(res_json))
 		
 def register(request):
-	username=request.REQUEST.get("username")
-	password=request.REQUEST.get("password")
-	email=request.REQUEST.get("email")
-	phone_num=request.REQUEST.get("phone_num")
+	status_obj={}
+	status_obj['code']=2000
+	status_obj['msg']='register success'
+	username=request.GET.get("username")
+	password=request.GET.get("password")
+	email=request.GET.get("email")
+	phone_num=request.GET.get("phone_num")
 	if username is None or password is None:
-		return HttpResponse('error,username or password is requested.')
-	if username == "" or password=="":
-		return HttpResponse('username error.')
+		status_obj['code']=4000
+		status_obj['msg']='username or password is none'
+		return HttpResponse(json.dumps(status_obj))
 	
 	user=User()
 	if check_user_exist(username):
-		return HttpResponse('user already exist.')
+		status_obj['code']=4001
+		status_obj['msg']='username is already exist'
+		return HttpResponse(json.dumps(status_obj))
 	user.name=username
 	user.password = password
 	if phone_num is not None:
@@ -154,7 +198,7 @@ def register(request):
 	if email is not None:
 		user.email = email
 	user.save()
-	return HttpResponse('register success...')
+	return HttpResponse(json.dumps(status_obj))
 	
 def show_user(request):
 	username=request.GET.get("username")
@@ -302,3 +346,372 @@ def blog(request):
 		'label=',field.label_tag
 	#return render_to_response('blog.html',{'form':form})
 	return render(request,'blog.html',{'form':form})
+	
+def getUUID():
+	
+	url = 'https://login.weixin.qq.com/jslogin'
+	params = {
+		'appid': 'wx782c26e4c19acffb',
+		'fun': 'new',
+		'lang': 'zh_CN',
+		'_': int(time.time()),
+	}
+
+	request = urllib2.Request(url = url, data = urllib.urlencode(params))
+	response = urllib2.urlopen(request)
+	data = response.read()
+
+	# print data
+
+	# window.QRLogin.code = 200; window.QRLogin.uuid = "oZwt_bFfRg==";
+	regx = r'window.QRLogin.code = (\d+); window.QRLogin.uuid = "(\S+?)"'
+	pm = re.search(regx, data)
+
+	code = pm.group(1)
+	uuid = pm.group(2)
+
+	if code == '200':
+		return uuid
+
+	return ""	
+
+def showQRImage(uuid):
+	if len(uuid)==0:
+		return;
+	global tip
+	url = 'https://login.weixin.qq.com/qrcode/' + uuid
+	params = {
+		't': 'webwx',
+		'_': int(time.time()),
+	}
+
+	request = urllib2.Request(url = url, data = urllib.urlencode(params))
+	response = urllib2.urlopen(request)
+
+	tip = 1
+	QRImagePath="api/static/img/%s.jpg"%(uuid)
+	f = open(QRImagePath, 'wb')
+	f.write(response.read())
+	f.close()
+
+def login(base_uri,redirect_uri):
+	#global skey, wxsid, wxuin, pass_ticket, BaseRequest
+	resp_data={}
+	request = urllib2.Request(url = redirect_uri)
+	response = urllib2.urlopen(request)
+	data = response.read()
+
+	print data
+
+	'''
+		<error>
+			<ret>0</ret>
+			<message>OK</message>
+			<skey>xxx</skey>
+			<wxsid>xxx</wxsid>
+			<wxuin>xxx</wxuin>
+			<pass_ticket>xxx</pass_ticket>
+			<isgrayscale>1</isgrayscale>
+		</error>
+		<error><ret>0</ret><message>OK</message>
+<skey>@crypt_8940936b_58307407faa32a423b87c161640d6b81</skey><wxsid>sEMWXrqKLdroEHFY</wxsid>
+<wxuin>145618555</wxuin><pass_ticket>m2HZLGbXnyJmYunUeIaYmTAky6utoK29jx0a4NhAIZ4%3D</pass_ticket><isgrayscale>1</isgrayscale></error>
+	'''
+
+	doc = xml.dom.minidom.parseString(data)
+	root = doc.documentElement
+
+	for node in root.childNodes:
+		if node.nodeName == 'skey':
+			skey = node.childNodes[0].data
+		elif node.nodeName == 'wxsid':
+			wxsid = node.childNodes[0].data
+		elif node.nodeName == 'wxuin':
+			wxuin = node.childNodes[0].data
+		elif node.nodeName == 'pass_ticket':
+			pass_ticket = node.childNodes[0].data
+
+	BaseRequest = {
+		'Uin': int(wxuin),
+		'Sid': wxsid,
+		'Skey': skey,
+		'DeviceID': deviceId,
+	}
+	resp_data['skey'] = skey
+	resp_data['wxsid'] = wxsid
+	resp_data['wxuin'] = wxuin
+	resp_data['pass_ticket'] = pass_ticket
+	resp_data['BaseRequest'] = BaseRequest
+	print '1pass_ticket=%s,len=%d'%(pass_ticket,len(pass_ticket))
+	return resp_data	
+
+def webwxinit(base_uri,wx_data):
+	print '2pass_ticket=%s,len=%d'%(wx_data['pass_ticket'],len(wx_data['pass_ticket']))
+
+	url = base_uri + '/webwxinit?pass_ticket=%s&skey=%s&r=%s' % (wx_data['pass_ticket'], wx_data['skey'], int(time.time()))
+	params = {
+		'BaseRequest': wx_data['BaseRequest']
+	}
+	print 'request=',wx_data['BaseRequest']
+	request = urllib2.Request(url = url, data = json.dumps(params))
+	request.add_header('ContentType', 'application/json; charset=UTF-8')
+	response = urllib2.urlopen(request)
+	data = response.read()
+
+	if DEBUG == True:
+		f = open('./webwxinit.json', 'wb')
+		f.write(data)
+		f.close()
+
+	# print data
+	global ContactList, My
+	dic = json.loads(data)
+	ContactList = dic['ContactList']
+	My = dic['User']
+
+	ErrMsg = dic['BaseResponse']['ErrMsg']
+	if len(ErrMsg) > 0:
+		print ErrMsg
+
+	Ret = dic['BaseResponse']['Ret']
+	if Ret != 0:
+		print 'web init fail...'
+		return False
+	print 'web init ok...'	
+	return True
+def webwxgetcontact(base_uri,wx_data):
+	print '3pass_ticket=%s,len=%d'%(wx_data['pass_ticket'],len(wx_data['pass_ticket']))
+	url = base_uri + '/webwxgetcontact?pass_ticket=%s&skey=%s&r=%s' % (wx_data['pass_ticket'], wx_data['skey'], int(time.time()))
+
+	request = urllib2.Request(url = url)
+	request.add_header('ContentType', 'application/json; charset=UTF-8')
+	response = urllib2.urlopen(request)
+	data = response.read()
+	print 'url=',url
+	if DEBUG == True:
+		f = open('./webwxgetcontact.json', 'wb')
+		f.write(data)
+		f.close()
+
+	# print data
+
+	dic = json.loads(data)
+	MemberList = dic['MemberList']
+	print 'members=',MemberList
+	SpecialUsers = ['newsapp', 'fmessage', 'filehelper', 'weibo', 'qqmail', 'fmessage', 'tmessage', 'qmessage', 'qqsync', 'floatbottle', 'lbsapp', 'shakeapp', 'medianote', 'qqfriend', 'readerapp', 'blogapp', 'facebookapp', 'masssendapp', 'meishiapp', 'feedsapp', 'voip', 'blogappweixin', 'weixin', 'brandsessionholder', 'weixinreminder', 'wxid_novlwrv3lqwv11', 'gh_22b87fa7cb3c', 'officialaccounts', 'notification_messages', 'wxid_novlwrv3lqwv11', 'gh_22b87fa7cb3c', 'wxitil', 'userexperience_alarm', 'notification_messages']
+	for i in xrange(len(MemberList) - 1, -1, -1):
+		Member = MemberList[i]
+		if Member['VerifyFlag'] & 8 != 0: 
+			MemberList.remove(Member)
+		elif Member['UserName'] in SpecialUsers:
+			MemberList.remove(Member)
+		elif Member['UserName'].find('@@') != -1:
+			MemberList.remove(Member)
+		elif Member['UserName'] == My['UserName']: 
+			MemberList.remove(Member)
+
+	return MemberList,data
+
+def createChatroom(base_uri,wx_data,UserNames):
+	MemberList = []
+	for UserName in UserNames:
+		MemberList.append({'UserName': UserName})
+
+
+	url = base_uri + '/webwxcreatechatroom?pass_ticket=%s&r=%s' % (wx_data['pass_ticket'], int(time.time()))
+	params = {
+		'BaseRequest': wx_data['BaseRequest'],
+		'MemberCount': len(MemberList),
+		'MemberList': MemberList,
+		'Topic': '',
+	}
+
+	request = urllib2.Request(url = url, data = json.dumps(params))
+	request.add_header('ContentType', 'application/json; charset=UTF-8')
+	response = urllib2.urlopen(request)
+	data = response.read()
+
+	# print data
+	print 'data=',data
+	dic = json.loads(data)
+	ChatRoomName = dic['ChatRoomName']
+	MemberList = dic['MemberList']
+	DeletedList = []
+	for Member in MemberList:
+		if Member['MemberStatus'] == 4: 
+			DeletedList.append(Member['UserName'])
+
+	ErrMsg = dic['BaseResponse']['ErrMsg']
+	if len(ErrMsg) > 0:
+		print ErrMsg
+
+	return (ChatRoomName, DeletedList)
+
+def deleteMember(base_uri,wx_data,ChatRoomName, UserNames):
+	url = base_uri + '/webwxupdatechatroom?fun=delmember&pass_ticket=%s' % (wx_data['pass_ticket'])
+	params = {
+		'BaseRequest': wx_data['BaseRequest'],
+		'ChatRoomName': ChatRoomName,
+		'DelMemberList': ','.join(UserNames),
+	}
+
+	request = urllib2.Request(url = url, data = json.dumps(params))
+	request.add_header('ContentType', 'application/json; charset=UTF-8')
+	response = urllib2.urlopen(request)
+	data = response.read()
+
+	# print data
+
+	dic = json.loads(data)
+	ErrMsg = dic['BaseResponse']['ErrMsg']
+	if len(ErrMsg) > 0:
+		print ErrMsg
+
+	Ret = dic['BaseResponse']['Ret']
+	if Ret != 0:
+		return False
+		
+	return True
+
+def addMember(base_uri,wx_data,ChatRoomName, UserNames):
+	url = base_uri + '/webwxupdatechatroom?fun=addmember&pass_ticket=%s' % (wx_data['pass_ticket'])
+	params = {
+		'BaseRequest': wx_data['BaseRequest'],
+		'ChatRoomName': ChatRoomName,
+		'AddMemberList': ','.join(UserNames),
+	}
+
+	request = urllib2.Request(url = url, data = json.dumps(params))
+	request.add_header('ContentType', 'application/json; charset=UTF-8')
+	response = urllib2.urlopen(request)
+	data = response.read()
+
+	# print data
+
+	dic = json.loads(data)
+	MemberList = dic['MemberList']
+	DeletedList = []
+	for Member in MemberList:
+		if Member['MemberStatus'] == 4: 
+			DeletedList.append(Member['UserName'])
+
+	ErrMsg = dic['BaseResponse']['ErrMsg']
+	if len(ErrMsg) > 0:
+		print ErrMsg
+
+	return DeletedList
+def get_deleted_friends(base_uri,wx_data,MemberList):
+	MAX_GROUP_NUM=100
+	ChatRoomName = ''
+	result = []
+	MemberCount=len(MemberList)
+	for i in xrange(0, int(math.ceil(MemberCount / float(MAX_GROUP_NUM)))):
+		UserNames = []
+		NickNames = []
+		DeletedList = ''
+		for j in xrange(0, MAX_GROUP_NUM):
+			if i * MAX_GROUP_NUM + j >= MemberCount:
+				break
+
+			Member = MemberList[i * MAX_GROUP_NUM + j]
+			UserNames.append(Member['UserName'])
+			NickNames.append(Member['NickName'].encode('utf-8'))
+                        
+		print 'num%s...' % (i + 1)
+		print ', '.join(NickNames)
+		if ChatRoomName == '':
+			print 'create chat room name'
+			(ChatRoomName, DeletedList) = createChatroom(base_uri,wx_data,UserNames)
+		else:
+			print 'room name=',ChatRoomName
+			DeletedList = addMember(base_uri,wx_data,ChatRoomName, UserNames)
+
+		DeletedCount = len(DeletedList)
+		if DeletedCount > 0:
+			result += DeletedList
+
+		print 'find %s friends that deleted you' % DeletedCount
+
+		deleteMember(base_uri,wx_data,ChatRoomName, UserNames)
+
+	resultNames = []
+	for Member in MemberList:
+		if Member['UserName'] in result:
+			NickName = Member['NickName']
+			if Member['RemarkName'] != '':
+				NickName += '(%s)' % Member['RemarkName']
+			resultNames.append(NickName.encode('utf-8'))
+
+	print '---------- list ----------'
+	print '\n'.join(resultNames)
+	print '-----------------------------------'
+	return resultNames
+def save_csv_file(MemberList):
+	with open('memberlist.csv', 'wb',encoding='utf-8') as csvfile:
+		spamwriter = csv.writer(csvfile,dialect='excel')
+		for Member in MemberList:
+			spamwriter.writerow([Member['UserName'],Member['NickName'].encode('utf-8')])
+			#NickNames.append(Member['NickName'].encode('utf-8'))
+def check_login_status(request):
+	MemberList=[]
+	json_data={}
+	opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cookielib.CookieJar()))
+	urllib2.install_opener(opener)
+	login_resp_data={}
+	tip = 1
+	uuid = request.GET.get("uuid")
+	if uuid is None or len(uuid) == 0:
+		return HttpResponse('require uuid')
+	url = 'https://login.weixin.qq.com/cgi-bin/mmwebwx-bin/login?tip=%s&uuid=%s&_=%s' % (tip, uuid, int(time.time()))
+
+	request = urllib2.Request(url = url)
+	response = urllib2.urlopen(request)
+	data = response.read()
+	
+	# print data
+
+	# window.code=500;
+	regx = r'window.code=(\d+);'
+	pm = re.search(regx, data)
+
+	code = pm.group(1)
+
+	if code == '201': 
+		print 'scan success'
+	elif code == '200': 
+		regx = r'window.redirect_uri="(\S+?)";'
+		pm = re.search(regx, data)
+		redirect_uri = pm.group(1) + '&fun=new'
+		base_uri = redirect_uri[:redirect_uri.rfind('/')]
+		login_resp_data=wx_login(base_uri,redirect_uri)
+		webwxinit(base_uri,login_resp_data)
+		MemberList,json_data = webwxgetcontact(base_uri,login_resp_data)
+		MemberCount = len(MemberList)
+		dlist=[]
+		#dlist=get_deleted_friends(base_uri,login_resp_data,MemberList)
+		#print dlist
+		return HttpResponse(json_data)
+		t=loader.get_template('wx_show.html')
+		c=Context({
+			'members':MemberList,
+			})
+		return HttpResponse(t.render(c))
+	elif code == '408': 
+		pass
+	# elif code == '400' or code == '500':
+	return HttpResponse(code)
+
+	
+def wechat_delete_friend(request):
+	uuid = getUUID()
+	showQRImage(uuid)
+	t=loader.get_template('show_image.html')
+	users=User.objects.all()
+	url="http://192.168.17.134/static/img/%s.jpg"%(uuid)
+	data={}
+	data['img_url']=url
+	data['uuid']=uuid
+	c=Context({
+		'data':data,
+			})
+	return HttpResponse(t.render(c))
